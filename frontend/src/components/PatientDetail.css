@@ -1,0 +1,89 @@
+/* Fond général */
+body {
+margin: 0;
+padding: 0;
+background: linear-gradient(135deg, #dbe9f4, #f0f4fa);
+font-family: 'Helvetica Neue', 'Roboto', sans-serif;
+}
+
+/* Conteneur principal */
+.detail-container {
+max-width: 500px;
+margin: 60px auto;
+background: rgba(255, 255, 255, 0.25);
+backdrop-filter: blur(16px);
+padding: 40px;
+border-radius: 20px;
+box-shadow:
+0 8px 30px rgba(0, 0, 0, 0.2),
+inset 0 0 10px rgba(255, 255, 255, 0.05);
+border: 1px solid rgba(255, 255, 255, 0.3);
+color: #2C3E50;
+transition: all 0.3s ease-in-out;
+}
+
+/* Titre */
+.detail-container h2 {
+text-align: center;
+margin-bottom: 30px;
+color: #1A2A6C;
+font-size: 24px;
+font-weight: 700;
+}
+
+/* Labels et inputs */
+.detail-container label {
+display: block;
+margin-bottom: 12px;
+font-size: 15px;
+font-weight: 500;
+}
+
+.detail-container input,
+.detail-container textarea {
+width: 100%;
+padding: 12px 14px;
+margin-top: 6px;
+border: 1px solid #ccc;
+border-radius: 10px;
+background: rgba(255, 255, 255, 0.3);
+font-size: 14px;
+outline: none;
+transition: all 0.3s ease;
+}
+
+.detail-container input:focus,
+.detail-container textarea:focus {
+border-color: #4F68C5;
+background: rgba(255, 255, 255, 0.5);
+}
+
+/* Bouton */
+.detail-container button {
+width: 100%;
+margin-top: 25px;
+padding: 14px;
+background-color: #1A2A6C;
+color: #fff;
+border: none;
+border-radius: 10px;
+font-weight: 600;
+font-size: 16px;
+cursor: pointer;
+transition: all 0.3s ease;
+box-shadow: 0 4px 10px rgba(79, 104, 197, 0.3);
+}
+
+.detail-container button:hover {
+background-color: #4058a0;
+transform: translateY(-1px);
+box-shadow: 0 6px 12px rgba(64, 88, 160, 0.4);
+}
+
+/* Messages */
+.detail-container p {
+text-align: center;
+color: red;
+font-size: 14px;
+margin-bottom: 10px;
+}

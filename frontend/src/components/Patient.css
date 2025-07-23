@@ -1,0 +1,82 @@
+
+/* Conteneur du formulaire */
+.form-container {
+background: rgba(255, 255, 255, 0.25);
+backdrop-filter: blur(12px);
+border-radius: 20px;
+padding: 40px 35px;
+width: 420px;
+color: #2C3E50;
+margin-top: 60px;
+box-shadow:
+0 8px 30px rgba(0, 0, 0, 0.2),
+inset 0 0 10px rgba(255, 255, 255, 0.05);
+border: 1px solid rgba(255, 255, 255, 0.3);
+transition: all 0.3s ease-in-out;
+}
+
+/* Titre du formulaire */
+.form-container h2 {
+margin-bottom: 25px;
+font-size: 24px;
+font-weight: 700;
+text-align: center;
+color: #1A2A6C;
+}
+
+/* Champs de formulaire */
+.form-container input,
+.form-container select,
+.form-container textarea {
+width: 100%;
+margin-bottom: 18px;
+padding: 12px 14px;
+border: 1px solid #ccc;
+border-radius: 10px;
+font-size: 15px;
+background: rgba(255, 255, 255, 0.3);
+transition: border-color 0.3s ease, background 0.3s ease;
+outline: none;
+}
+
+.form-container input:focus,
+.form-container select:focus,
+.form-container textarea:focus {
+border-color: #4F68C5;
+background: rgba(255, 255, 255, 0.45);
+}
+
+/* Placeholder color */
+.form-container input::placeholder,
+.form-container textarea::placeholder {
+color: #666;
+}
+
+/* Bouton principal */
+.form-container button {
+width: 100%;
+padding: 14px;
+background-color: #4F68C5;
+color: white;
+border: none;
+border-radius: 10px;
+font-weight: 600;
+font-size: 16px;
+cursor: pointer;
+box-shadow: 0 4px 10px rgba(79, 104, 197, 0.3);
+transition: all 0.3s ease;
+}
+
+.form-container button:hover {
+background-color: #4058a0;
+transform: translateY(-1px);
+box-shadow: 0 6px 12px rgba(64, 88, 160, 0.4);
+}
+
+/* Message d’erreur */
+.form-container .error {
+margin-top: 10px;
+color: #E74C3C;
+font-size: 14px;
+text-align: center;
+}

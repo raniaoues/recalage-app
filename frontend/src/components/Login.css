@@ -1,0 +1,109 @@
+/* Centrage et fond général */
+body {
+margin: 0;
+padding: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+background: linear-gradient(135deg, #dbe9f4, #f0f4fa);
+font-family: 'Helvetica Neue', 'Roboto', sans-serif;
+}
+
+/* Boîte de connexion en mode vitre floutée */
+.login-box {
+background: rgba(255, 255, 255, 0.25);
+backdrop-filter: blur(16px);
+border-radius: 20px;
+padding: 50px 35px;
+width: 340px;
+color: #333;
+display: flex;
+flex-direction: column;
+align-items: center;
+box-shadow: 
+0 8px 30px rgba(0, 0, 0, 0.25),
+inset 0 0 10px rgba(255, 255, 255, 0.05);
+transition: all 0.3s ease-in-out;
+border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Titre */
+.login-box h2 {
+margin-bottom: 25px;
+font-weight: 700;
+color: #2C3E50;
+font-size: 24px;
+}
+
+/* Champs de saisie */
+.login-box input {
+width: 100%;
+margin: 12px 0;
+padding: 14px 16px;
+padding-right: 40px; /* espace pour l'icône œil */
+border: 1px solid black;
+border-radius: 10px;
+font-size: 15px;
+outline: none;
+background: rgba(255, 255, 255, 0.3);
+color: #2C3E50;
+transition: all 0.3s ease;
+}
+
+.login-box input::placeholder {
+color: #666;
+}
+
+.login-box input:focus {
+border: 1px solid #4F68C5;
+background: rgba(255, 255, 255, 0.45);
+}
+
+/* Container du champ password pour positionner l’œil */
+.password-container {
+width: 100%;
+margin: 12px 0 12px -58px;
+position: relative;
+}
+
+/* Icône œil */
+.eye-icon {
+position: absolute;
+top: 50%;
+right: -40px;
+transform: translateY(-50%);
+cursor: pointer;
+color: #4F68C5;
+}
+
+/* Bouton de connexion */
+.login-box button {
+width: 100%;
+margin-top: 20px;
+padding: 14px;
+background-color: #1A2A6C;
+color: #fff;
+border: none;
+border-radius: 10px;
+font-weight: 600;
+font-size: 16px;
+cursor: pointer;
+transition: all 0.3s ease;
+box-shadow: 0 4px 10px rgba(79, 104, 197, 0.3);
+}
+
+.login-box button:hover {
+background-color: #4058a0;
+transform: translateY(-1px);
+box-shadow: 0 6px 12px rgba(64, 88, 160, 0.4);
+}
+
+/* Message d'erreur */
+.error {
+margin-top: 12px;
+font-size: 14px;
+color: #E74C3C;
+text-align: center;
+display: block;
+}

@@ -1,0 +1,483 @@
+.app-container {
+max-width: 900px; /* largeur max si besoin */
+max-height: 650px;
+margin: 20px auto;
+padding: 10px 20px;
+box-sizing: border-box;
+font-family: Arial, sans-serif;
+}
+:root {
+--primary-dark: #1A2A6C;
+--primary: #4F68C5;
+--primary-light: #B3C7F7;
+--background: #f7f9fc;
+--text-dark: #1e1e1e;
+--text-light: #666;
+--border-radius: 12px;
+--box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body {
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+margin: 0;
+padding: 0;
+background-color: var(--background);
+color: var(--text-dark);
+}
+
+
+/* Header - ligne horizontale */
+.header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 30px;
+gap: 15px;
+flex-wrap: wrap;
+}
+
+/* Patient ID input */
+.patient-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+  font-size: 16px;
+  flex: 1 1 auto;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.patient-id input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  width: 205px;
+  background-color: #ffffff;
+  overflow: auto;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+
+.patient-input {
+padding: 6px 10px;
+font-size: 14px;
+border: 1px solid #ccc;
+border-radius: var(--border-radius);
+width: 120px;
+background-color: #f0f0f0;
+cursor: not-allowed;
+}
+
+/* Doctor name style */
+.doctor-name {
+flex: 1 1 200px;
+font-size: 18px;
+font-weight: 700;
+color: var(--primary-dark);
+text-align: center;
+}
+
+/* Logout button */
+.logout-button {
+flex: 0 0 auto;
+background: linear-gradient(to right, var(--primary), var(--primary-light));
+border: none;
+padding: 10px 24px;
+color: white;
+font-weight: bold;
+border-radius: var(--border-radius);
+cursor: pointer;
+box-shadow: var(--box-shadow);
+transition: background 0.3s ease;
+}
+
+.logout-button:hover {
+background: linear-gradient(to right, var(--primary-dark), var(--primary));
+}
+
+/* Upload images row */
+.upload-row {
+display: flex;
+gap: 30px;
+margin-bottom: 40px;
+flex-wrap: wrap;
+justify-content: center;
+}
+
+/* Upload field container */
+.upload-field {
+flex: 1 1 40%;
+min-width: 280px;
+background-color: var(--background);
+padding: 15px 20px;
+border-radius: var(--border-radius);
+box-shadow: var(--box-shadow);
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+
+/* Label for images */
+.image-label {
+font-weight: 700;
+color: var(--primary-dark);
+margin-bottom: 15px;
+font-size: 18px;
+}
+
+/* Upload box styling */
+.upload-box {
+border: 2px dashed var(--primary);
+border-radius: var(--border-radius);
+width: 100%;
+height: 130px;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+cursor: pointer;
+transition: background-color 0.3s ease;
+text-align: center;
+color: var(--primary);
+font-weight: 600;
+font-size: 14px;
+}
+
+.upload-box:hover {
+background-color: var(--primary-light);
+color: white;
+}
+
+.upload-box input[type="file"] {
+display: none;
+}
+
+/* Matrix section */
+.matrix-section {
+margin-bottom: 40px;
+text-align: center;
+}
+
+.matrix-image {
+max-width: 300px;
+width: 100%;
+margin: 15px 0;
+border-radius: var(--border-radius);
+box-shadow: var(--box-shadow);
+}
+
+.load-button {
+background: linear-gradient(to right, var(--primary), var(--primary-light));
+border: none;
+padding: 10px 30px;
+color: white;
+font-weight: 600;
+border-radius: var(--border-radius);
+cursor: pointer;
+box-shadow: var(--box-shadow);
+transition: background 0.3s ease;
+}
+
+.load-button:hover {
+background: linear-gradient(to right, var(--primary-dark), var(--primary));
+}
+
+/* Slider section */
+.slider-section {
+margin-bottom: 40px;
+text-align: center;
+}
+
+.slider-label {
+display: block;
+margin-bottom: 10px;
+font-weight: 600;
+color: var(--primary-dark);
+font-size: 16px;
+}
+
+input[type="range"] {
+width: 80%;
+max-width: 400px;
+cursor: pointer;
+}
+
+/* Image preview container */
+.image-preview {
+margin-top: 25px;
+display: flex;
+justify-content: center;
+gap: 20px;
+flex-wrap: wrap;
+}
+
+.preview-img {
+max-width: 300px;
+max-height: 200px;
+border-radius: var(--border-radius);
+box-shadow: var(--box-shadow);
+object-fit: contain;
+}
+
+/* Config section */
+.config-section {
+display: flex;
+justify-content: center;
+gap: 40px;
+margin-bottom: 40px;
+flex-wrap: wrap;
+}
+
+.config-section > div {
+min-width: 140px;
+}
+
+.config-section label {
+display: block;
+margin-bottom: 8px;
+font-weight: 600;
+color: var(--primary-dark);
+}
+
+.config-section select,
+.config-section input[type="number"] {
+padding: 8px 12px;
+font-size: 14px;
+border: 1px solid #ccc;
+border-radius: var(--border-radius);
+width: 100%;
+}
+
+/* Register button */
+.register-section {
+text-align: center;
+margin-bottom: 40px;
+}
+
+.register-button {
+background: linear-gradient(to right, var(--primary), var(--primary-light));
+border: none;
+padding: 14px 36px;
+color: white;
+font-weight: 700;
+font-size: 16px;
+border-radius: var(--border-radius);
+cursor: pointer;
+box-shadow: var(--box-shadow);
+transition: background 0.3s ease;
+}
+
+.register-button:hover {
+background: linear-gradient(to right, var(--primary-dark), var(--primary));
+}
+
+/* Result section */
+.result-section {
+display: flex;
+flex-wrap: wrap;
+gap: 30px;
+justify-content: space-around;
+margin-bottom: 40px;
+}
+
+.result-section .image-label {
+width: 100%;
+text-align: center;
+margin-bottom: 10px;
+font-size: 16px;
+}
+
+.black-box {
+background-color: #222;
+width: 280px;
+height: 180px;
+border-radius: var(--border-radius);
+box-shadow: var(--box-shadow);
+}
+
+/* Metrics section */
+.metrics-section {
+background-color: var(--background);
+padding: 20px 30px;
+border-radius: var(--border-radius);
+box-shadow: var(--box-shadow);
+max-width: 400px;
+margin: 0 auto 50px auto;
+}
+
+.metrics-section h3 {
+color: var(--primary-dark);
+margin-bottom: 15px;
+}
+
+.metrics-section ul {
+list-style: none;
+padding-left: 0;
+}
+
+.metrics-section li {
+margin-bottom: 8px;
+font-weight: 600;
+color: var(--text-light);
+font-size: 15px;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+.header {
+flex-direction: column;
+gap: 10px;
+}
+
+.upload-row {
+flex-direction: column;
+}
+
+.upload-field {
+min-width: 100%;
+}
+
+.config-section {
+flex-direction: column;
+gap: 20px;
+}
+
+.result-section {
+flex-direction: column;
+align-items: center;
+}
+}
+
+.slider-section {
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column; /* ❗ Assure que tout est vertical */
+  align-items: center;
+}
+
+
+.matrix-image {
+  width: 100%;
+  max-height: 400px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+  margin-bottom: 15px; /* ❗ Laisse de l'espace avant le slider */
+}
+
+.slider-range {
+  width: 100%;
+}
+.matrix-result {
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+  font-family: monospace;
+}
+.matrix-wrapper {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.matrix-wrapper {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.matrix-brackets {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.left-bracket,
+.right-bracket {
+  font-size: 120px;
+  font-weight: normal;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 0 4px; /* réduit l’espace horizontal */
+  line-height: 1;
+  user-select: none; /* empêche sélection accidentelle */
+}
+
+.matrix-table {
+  border-collapse: collapse;
+  background-color: transparent;
+  margin: 0; /* enlève marges autour du tableau */
+  user-select: none; /* désactive sélection si besoin */
+}
+
+.matrix-table td {
+  border: none;
+  padding: 6px 14px;
+  font-family: monospace;
+  font-size: 16px;
+  text-align: center;
+  cursor: default; /* pas de curseur pointer */
+  transition: none !important; /* désactive toutes animations hover */
+}
+
+.matrix-table tr:hover, 
+.matrix-table td:hover {
+  background-color: transparent !important; /* supprime tout survol */
+}
+.mi-chart-container {
+  max-width: 100%;       /* s'adapte à la largeur du parent */
+  width: 600px;          /* largeur max souhaitée */
+  margin: 20px auto;     /* centrer horizontalement avec marge en haut/bas */
+  padding: 10px;
+  box-sizing: border-box;
+  background: #fff;      /* fond blanc */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+
+/* Adaptation mobile */
+@media (max-width: 640px) {
+  .mi-chart-container {
+    width: 90%;          /* presque toute la largeur de l'écran */
+    padding: 5px;
+  }
+}
+.progress-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 30px;
+  border: 2px solid #000; /* Cadre noir */
+  border-radius: 5px;
+  background-color: #fff;
+  margin: 20px auto;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: #4F68C5; /* Couleur principale */
+  border-radius: 3px 0 0 3px;
+  transition: width 0.3s ease-in-out;
+}
+
+.progress-text {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #000; /* Texte noir */
+  font-size: 16px;
+}
