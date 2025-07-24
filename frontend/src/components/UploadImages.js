@@ -3,6 +3,7 @@ import './UploadImages.css';
 import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
+import UTIF from 'utif'; 
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement);
 
@@ -29,6 +30,81 @@ export default function ImageRegistrationApp() {
   const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [metrics, setMetrics] = useState(null);
+
+  // ✅ Convertisseur TIFF → PNG base64
+  const convertTiffToPng = (arrayBuffer, callback) => {
+    try {
+      const ifds = UTIF.decode(arrayBuffer);
+      UTIF.decodeImage(arrayBuffer, ifds[0]);
+      const rgba = UTIF.toRGBA8(ifds[0]);
+
+      const width = ifds[0].width;
+      const height = ifds[0].height;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      const imageData = ctx.createImageData(width, height);
+      imageData.data.set(rgba);
+      ctx.putImageData(imageData, 0, 0);
+
+      const pngData = canvas.toDataURL("image/png");
+      callback(pngData);
+    } catch (error) {
+      console.error("Erreur de conversion TIFF:", error);
+      alert("Format TIFF non supporté ou fichier corrompu");
+    }
+  };
+
+  // ✅ Chargement image FIXED
+  const handleFixedUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    if (file.type === 'image/tiff' || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff')) {
+      reader.onload = (e) => {
+        convertTiffToPng(e.target.result, (pngData) => {
+          setFixedImage(pngData);
+          localStorage.setItem("cas_fixed", pngData.split(',')[1]);
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onloadend = () => {
+        setFixedImage(reader.result);
+        localStorage.setItem("cas_fixed", reader.result.split(',')[1]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // ✅ Chargement image MOVED
+  const handleMovingUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    if (file.type === 'image/tiff' || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff')) {
+      reader.onload = (e) => {
+        convertTiffToPng(e.target.result, (pngData) => {
+          setMovingImage(pngData);
+          localStorage.setItem("cas_moved", pngData.split(',')[1]);
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onloadend = () => {
+        setMovingImage(reader.result);
+        localStorage.setItem("cas_moved", reader.result.split(',')[1]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Variable pour stocker l'intervalle de mise à jour du progrès
   let progressInterval = null;
@@ -92,30 +168,6 @@ export default function ImageRegistrationApp() {
       }
     };
   }, []);
-
-  const handleFixedUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFixedImage(reader.result);
-        localStorage.setItem("cas_fixed", reader.result.split(',')[1]);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleMovingUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMovingImage(reader.result);
-        localStorage.setItem("cas_moved", reader.result.split(',')[1]);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   useEffect(() => {
     if (!fixedImage || !movingImage) return;
@@ -354,7 +406,7 @@ export default function ImageRegistrationApp() {
             />
           ) : (
             <div className="upload-box" onClick={() => document.getElementById('fixed-upload').click()}>
-              <input id="fixed-upload" type="file" accept="image/*" onChange={handleFixedUpload} />
+              <input id="fixed-upload" type="file" accept="image/*,.tif,.tiff" onChange={handleFixedUpload} />
               Click or drop fixed image
             </div>
           )}
@@ -372,7 +424,7 @@ export default function ImageRegistrationApp() {
             />
           ) : (
             <div className="upload-box" onClick={() => document.getElementById('moving-upload').click()}>
-              <input id="moving-upload" type="file" accept="image/*" onChange={handleMovingUpload} />
+              <input id="moving-upload" type="file" accept="image/*,.tif,.tiff" onChange={handleMovingUpload} />
               Click or drop moving image
             </div>
           )}
@@ -537,23 +589,98 @@ export default function ImageRegistrationApp() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '150px', alignItems: 'flex-start' }}>
-        {/* Registered Image Preview */}
-        {registeredImage && (
-          <div className="registered-section" style={{ flex: 1 }}>
-            <h3>Image Recalée (Registered)</h3>
-            <img src={registeredImage} alt="Registered" className="preview-img" style={{ maxWidth: '100%', marginBottom: '40px' }} />
-          </div>
-        )}
+      {fixedImage && registeredImage && differenceImage && (
+  <div
+    style={{
+      display: 'flex',
+      gap: '50px',
+      justifyContent: 'center',
+      alignItems: 'flex-start', // ou 'center' si tu veux centrer verticalement
+      marginBottom: '40px',
+      // Optionnel : hauteur minimale pour aligner titres + images
+      minHeight: '350px',
+    }}
+  >
+    {/* Image Fixe */}
+    <div
+      className="fixed-section"
+      style={{
+        flex: 1,
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <h3 style={{ marginBottom: '10px' }}>Image Fixe (Fixed)</h3>
+      <img
+        src={fixedImage}
+        alt="Fixed"
+        className="preview-img"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '300px', // limite la hauteur pour homogénéité
+          border: '2px solid #ccc',
+          borderRadius: '8px',
+          objectFit: 'contain', // pour garder les proportions sans déformation
+        }}
+      />
+    </div>
 
-        {/* Difference Image After Registration */}
-        {differenceImage && (
-          <div className="difference-section" style={{ flex: 1 }}>
-            <h3>Différence après Recalage</h3>
-            <img src={differenceImage} alt="Difference After Registration" className="preview-img" style={{ maxWidth: '100%' , marginBottom: '40px'}} />
-          </div>
-        )}
-      </div>
+    {/* Image Recalée */}
+    <div
+      className="registered-section"
+      style={{
+        flex: 1,
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <h3 style={{ marginBottom: '10px' }}>Image Recalée (Registered)</h3>
+      <img
+        src={registeredImage}
+        alt="Registered"
+        className="preview-img"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '300px',
+          border: '2px solid #ccc',
+          borderRadius: '8px',
+          objectFit: 'contain',
+        }}
+      />
+    </div>
+
+    {/* Image Différence */}
+    <div
+      className="difference-section"
+      style={{
+        flex: 1,
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <h3 style={{ marginBottom: '10px' }}>Différence après Recalage</h3>
+      <img
+        src={differenceImage}
+        alt="Difference After Registration"
+        className="preview-img"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '300px',
+          border: '2px solid #ccc',
+          borderRadius: '8px',
+          objectFit: 'contain',
+        }}
+      />
+    </div>
+  </div>
+)}
+
 
       {/* Affichage métriques */}
       {metrics && (
