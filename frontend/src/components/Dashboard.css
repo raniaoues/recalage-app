@@ -1,0 +1,139 @@
+body {
+background-color: #f0f4ff;
+font-family: "Segoe UI", sans-serif;
+}
+
+.dashboard-container {
+min-width: 800px;
+min-height: 650px;
+margin: auto;
+padding: 30px 20px;
+}
+
+.dashboard-title {
+text-align: center;
+color: #111;
+font-size: 32px;
+font-weight: 700;
+margin-bottom: 10px;
+}
+
+.doctor-name {
+text-align: center;
+font-size: 18px;
+color: #555;
+margin-bottom: 30px;
+}
+
+.cards {
+display: flex;
+gap: 30px;
+justify-content: center;
+margin-bottom: 40px;
+}
+
+.card {
+background: white;
+border-radius: 12px;
+padding: 25px;
+width: 150px;
+box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+text-align: center;
+transition: 0.3s ease;
+border-left: 6px solid #007bff;
+}
+
+.card:hover {
+transform: translateY(-5px);
+}
+
+.card h3 {
+font-size: 18px;
+color: #007bff;
+margin-bottom: 10px;
+}
+
+.card p {
+font-size: 22px;
+font-weight: bold;
+color: #222;
+}
+
+.chart-section,
+.pathology-section {
+margin-top: 40px;
+}
+
+.chart-section h3,
+.pathology-section h3 {
+font-size: 20px;
+margin-bottom: 15px;
+color: #333;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.chart .bar {
+display: flex;
+align-items: center;
+margin-bottom: 8px;
+}
+
+.bar .label {
+width: 120px;
+font-size: 14px;
+color: #444;
+}
+
+.bar-inner {
+background-color: #28a745;
+color: white;
+padding: 5px 10px;
+border-radius: 4px;
+min-width: 30px;
+}
+
+.pathology-section table {
+width: 100%;
+border-collapse: collapse;
+background-color: white;
+border-radius: 8px;
+overflow: hidden;
+box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.pathology-section th,
+.pathology-section td {
+padding: 12px 16px;
+border-bottom: 1px solid #eee;
+text-align: left;
+}
+
+.pathology-section th {
+background-color: #f9fafc;
+color: #555;
+font-weight: 600;
+}
+
+.pathology-section td {
+color: #222;
+}
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px; /* espace en dessous */
+}
+
+.dashboard-title {
+  text-align: left; /* optionnel, par défaut flex item */
+  margin: 0; /* enlever marge par défaut */
+}
+
+.doctor-name {
+  text-align: right;
+  font-size: 18px;
+  color: #555;
+  margin: 0;
+}

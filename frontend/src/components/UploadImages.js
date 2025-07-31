@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './UploadImages.css';
 import axios from 'axios';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
 import UTIF from 'utif'; 
+import { useNavigate } from 'react-router-dom';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement);
 
@@ -17,8 +18,10 @@ export default function ImageRegistrationApp() {
   const [neurons, setNeurons] = useState(100);
   const [epochs, setEpochs] = useState(100);
   const [matrix, setMatrix] = useState(null);
+  const navigate = useNavigate();
+
   const canvasRef = useRef(null);
-  
+  const [differenceAlpha, setDifferenceAlpha] = useState(0.5);
   const [registeredImage, setRegisteredImage] = useState(null);
   const [differenceImage, setDifferenceImage] = useState(null);
   const [overlayImage, setOverlayImage] = useState(null);
@@ -30,7 +33,60 @@ export default function ImageRegistrationApp() {
   const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [metrics, setMetrics] = useState(null);
+  const diffCanvasRef = useRef(null);
+  const [dynamicDifference, setDynamicDifference] = useState(null); // Ajoutez cette ligne
+  const computeDynamicDifference = useCallback(async (alpha) => {
+  if (!fixedImage || !registeredImage) return;
 
+  try {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    canvas.width = 512;
+    canvas.height = 512;
+
+    const loadImage = (src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
+
+    const [fixedImg, registeredImg] = await Promise.all([
+      loadImage(fixedImage),
+      loadImage(registeredImage)
+    ]);
+
+    // Dessiner et calculer la différence
+    ctx.drawImage(fixedImg, 0, 0);
+    const fixedData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(registeredImg, 0, 0);
+    const registeredData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    const diffData = ctx.createImageData(canvas.width, canvas.height);
+    
+    for (let i = 0; i < fixedData.data.length; i += 4) {
+      const weight = (alpha < 0.5) ? (0.5 - alpha) * 2 : (alpha - 0.5) * 2;
+      
+      for (let ch = 0; ch < 3; ch++) {
+        const fixedVal = fixedData.data[i + ch];
+        const registeredVal = registeredData.data[i + ch];
+        
+        diffData.data[i + ch] = Math.round(
+          (alpha < 0.5 ? fixedVal : registeredVal) * weight + 
+          Math.abs(fixedVal - registeredVal) * (1 - weight)
+        );
+      }
+      diffData.data[i + 3] = 255;
+    }
+
+    ctx.putImageData(diffData, 0, 0);
+    setDynamicDifference(canvas.toDataURL());
+    
+  } catch (error) {
+    console.error("Erreur de calcul:", error);
+  }
+}, [fixedImage, registeredImage]);
   // ✅ Convertisseur TIFF → PNG base64
   const convertTiffToPng = (arrayBuffer, callback) => {
     try {
@@ -168,7 +224,11 @@ export default function ImageRegistrationApp() {
       }
     };
   }, []);
-
+  useEffect(() => {
+  if (registeredImage && fixedImage) {
+    computeDynamicDifference(differenceAlpha);
+  }
+}, [differenceAlpha, registeredImage, fixedImage, computeDynamicDifference]);
   useEffect(() => {
     if (!fixedImage || !movingImage) return;
 
@@ -241,68 +301,91 @@ export default function ImageRegistrationApp() {
   }, [fixedImage, movingImage, alpha]);
 
   const handleRegister = async () => {
-    const fromHistory = localStorage.getItem("cas_from_history") === "true";
-    if (fromHistory) {
-      alert("Ce cas provient de l'historique, pas besoin de le sauvegarder à nouveau.");
-      return;
+  const fromHistory = localStorage.getItem("cas_from_history") === "true";
+  if (fromHistory) {
+    alert("Ce cas provient de l'historique, pas besoin de le sauvegarder à nouveau.");
+    return;
+  }
+
+  const fixed_image = localStorage.getItem("cas_fixed");
+  const moved_image = localStorage.getItem("cas_moved");
+  const matrixStr = localStorage.getItem("cas_matrix");
+  const miListStr = localStorage.getItem("cas_mi_list");
+
+  if (!fixed_image || !moved_image || !matrixStr) {
+    alert("Données d'images ou matrice manquantes.");
+    return;
+  }
+
+  let matrix, mi_list;
+  try {
+    matrix = JSON.parse(matrixStr);
+    mi_list = miListStr ? JSON.parse(miListStr) : [];
+  } catch (e) {
+    alert("Erreur de parsing des données.");
+    return;
+  }
+
+  try {
+    setIsGenerating(true);
+    setProgress(30);
+
+    const response = await fetch(`${BASE_URL}/register?patient_id=${patientId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fixed_image, moved_image, matrix, mi_list })
+    });
+
+    setProgress(70);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Erreur serveur");
     }
 
-    const fixed_image = localStorage.getItem("cas_fixed");
-    const moved_image = localStorage.getItem("cas_moved");
-    const matrixStr = localStorage.getItem("cas_matrix");
-    const miListStr = localStorage.getItem("cas_mi_list");
+    const data = await response.json();
+    
+    // Mise à jour des états
+    const registeredImg = `data:image/png;base64,${data.registered_image}`;
+    setRegisteredImage(registeredImg);
+    setDifferenceAlpha(0.5); // Réinitialiser le slider
+    
+    // Préparer les images sources pour le calcul dynamique
+    const fixedImg = `data:image/png;base64,${fixed_image}`;
+    setFixedImage(fixedImg);
+    setMovingImage(`data:image/png;base64,${moved_image}`);
 
-    if (!fixed_image || !moved_image || !matrixStr) {
-      alert("Données d'images ou matrice manquantes.");
-      return;
+    // Deux options pour la différence :
+    // 1. Utiliser celle du backend si disponible
+    // 2. Sinon calculer côté client
+    if (data.difference_image) {
+      const diffImg = `data:image/png;base64,${data.difference_image}`;
+      setDifferenceImage(diffImg);
+      setDynamicDifference(diffImg);
+    } else {
+      // Calculer la différence initiale
+      computeDynamicDifference(0.5);
     }
 
-    let matrix, mi_list;
-    try {
-      matrix = JSON.parse(matrixStr);
-      mi_list = miListStr ? JSON.parse(miListStr) : [];
-    } catch (e) {
-      alert("Erreur de parsing des données.");
-      return;
+    // Mettre à jour les métriques
+    if (data.metrics) {
+      setMetrics(data.metrics);
     }
 
-    try {
-      const response = await fetch(`${BASE_URL}/register?patient_id=${patientId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fixed_image, moved_image, matrix, mi_list })
-      });
+    // Nettoyage du localStorage
+    ["cas_fixed", "cas_moved", "cas_matrix", "cas_mi_list", "cas_from_history"].forEach(
+      key => localStorage.removeItem(key)
+    );
 
-      const data = await response.json();
-      console.log("Réponse backend metrics:", data.metrics);
-      if (response.ok && data.registered_image) {
-        setRegisteredImage(`data:image/png;base64,${data.registered_image}`);
-
-        if (data.difference_image) {
-          setDifferenceImage(`data:image/png;base64,${data.difference_image}`);
-        } else {
-          setDifferenceImage(null);
-        }
-
-        if (data.metrics) {
-          setMetrics(data.metrics);
-        } else {
-          setMetrics(null);
-        }
-
-        localStorage.removeItem("cas_fixed");
-        localStorage.removeItem("cas_moved");
-        localStorage.removeItem("cas_matrix");
-        localStorage.removeItem("cas_mi_list");
-        localStorage.removeItem("cas_from_history");
-      } else {
-        alert("Erreur lors du recalage : " + (data.error || "Inconnue"));
-      }
-    } catch (err) {
-      alert("Erreur réseau ou serveur.");
-    }
-  };
-
+    setProgress(100);
+    
+  } catch (err) {
+    console.error("Erreur lors du recalage:", err);
+    alert(`Échec du recalage: ${err.message}`);
+  } finally {
+    setIsGenerating(false);
+  }
+};
   const handleGenerateMatrix = async () => {
   if (!fixedImage || !movingImage) {
     alert("Veuillez d'abord charger les deux images.");
@@ -462,11 +545,22 @@ export default function ImageRegistrationApp() {
       </div>
 
       {/* Bouton Générer matrice */}
-      <div className="matrix-section" style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <div className="matrix-section">
         <button className="load-button" onClick={handleGenerateMatrix} disabled={isGenerating}>
-          Générer matrice de transformation
+          Generate transformation matrix
         </button>
+        <button
+              className="manual-register-button"
+              onClick={() => navigate('/manual-register', {
+                state: { fixedImage, movingImage }
+              })}
+              disabled={isGenerating}
+            >
+              Register Manually
+            </button>
+
       </div>
+
 
      {/* Barre de progression */}
 {isGenerating && (
@@ -566,7 +660,7 @@ export default function ImageRegistrationApp() {
                   data: miList,
                   borderColor: 'rgba(75,192,192,1)',
                   backgroundColor: 'rgba(75,192,192,0.2)',
-                 
+                
                                     tension: 0.2,
                 },
               ],
@@ -589,98 +683,126 @@ export default function ImageRegistrationApp() {
         </button>
       </div>
 
-      {fixedImage && registeredImage && differenceImage && (
-  <div
-    style={{
+     {fixedImage && registeredImage && (
+  <div style={{ marginBottom: '40px' }}>
+    {/* Ligne des 3 images alignées */}
+    <div style={{
       display: 'flex',
-      gap: '50px',
+      gap: '30px',
       justifyContent: 'center',
-      alignItems: 'flex-start', // ou 'center' si tu veux centrer verticalement
-      marginBottom: '40px',
-      // Optionnel : hauteur minimale pour aligner titres + images
-      minHeight: '350px',
-    }}
-  >
-    {/* Image Fixe */}
-    <div
-      className="fixed-section"
-      style={{
-        flex: 1,
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <h3 style={{ marginBottom: '10px' }}>Image Fixe (Fixed)</h3>
-      <img
-        src={fixedImage}
-        alt="Fixed"
-        className="preview-img"
-        style={{
-          maxWidth: '100%',
-          maxHeight: '300px', // limite la hauteur pour homogénéité
-          border: '2px solid #ccc',
-          borderRadius: '8px',
-          objectFit: 'contain', // pour garder les proportions sans déformation
-        }}
-      />
-    </div>
+      alignItems: 'flex-start',
+      marginBottom: '20px'
+    }}>
+      {/* Image Fixe */}
+      <div style={{ flex: 1, textAlign: 'center', maxWidth: '30%' }}>
+        <h3 style={{ marginBottom: '10px' }}>Fixed Image</h3>
+        <img
+          src={fixedImage}
+          alt="Fixed"
+          style={{
+            width: '100%',
+            maxHeight: '300px',
+            border: '2px solid #ccc',
+            borderRadius: '8px',
+            objectFit: 'contain'
+          }}
+        />
+      </div>
 
-    {/* Image Recalée */}
-    <div
-      className="registered-section"
-      style={{
-        flex: 1,
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <h3 style={{ marginBottom: '10px' }}>Image Recalée (Registered)</h3>
-      <img
-        src={registeredImage}
-        alt="Registered"
-        className="preview-img"
-        style={{
-          maxWidth: '100%',
-          maxHeight: '300px',
-          border: '2px solid #ccc',
-          borderRadius: '8px',
-          objectFit: 'contain',
-        }}
-      />
-    </div>
+      {/* Image Recalée */}
+      <div style={{ flex: 1, textAlign: 'center', maxWidth: '30%' }}>
+        <h3 style={{ marginBottom: '10px' }}>Registered Image</h3>
+        <img
+          src={registeredImage}
+          alt="Registered"
+          style={{
+            width: '100%',
+            maxHeight: '300px',
+            border: '2px solid #ccc',
+            borderRadius: '8px',
+            objectFit: 'contain'
+          }}
+        />
+      </div>
 
-    {/* Image Différence */}
-    <div
-      className="difference-section"
-      style={{
-        flex: 1,
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <h3 style={{ marginBottom: '10px' }}>Différence après Recalage</h3>
-      <img
-        src={differenceImage}
-        alt="Difference After Registration"
-        className="preview-img"
-        style={{
-          maxWidth: '100%',
-          maxHeight: '300px',
+      {/* Image Différence avec slider dédié */}
+      <div style={{ flex: 1, textAlign: 'center', maxWidth: '30%' }}>
+        <h3 style={{ marginBottom: '10px' }}>Difference</h3>
+        
+        {/* Conteneur image différence */}
+        <div style={{
+          width: '100%',
+          marginBottom: '15px',
           border: '2px solid #ccc',
           borderRadius: '8px',
-          objectFit: 'contain',
-        }}
-      />
+          overflow: 'hidden'
+        }}>
+          {dynamicDifference ? (
+            <img
+              src={dynamicDifference}
+              alt="Difference"
+              style={{
+                width: '100%',
+                maxHeight: '300px',
+                objectFit: 'contain',
+                display: 'block'
+              }}
+            />
+          ) : (
+            <div style={{
+              height: '300px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#f5f5f5'
+            }}>
+          
+            </div>
+          )}
+        </div>
+
+        {/* Slider centré sous l'image différence seulement */}
+        <div style={{ 
+          width: '100%', 
+          padding: '0 5px',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            width: '100%'
+          }}>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={differenceAlpha}
+              onChange={(e) => setDifferenceAlpha(parseFloat(e.target.value))}
+              style={{
+                width: '100%',
+                height: '6px',
+                borderRadius: '3px',
+                background: '#e0e0e0',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            />
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '5px',
+            fontSize: '0.8em',
+            color: '#666'
+          }}>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 )}
-
 
       {/* Affichage métriques */}
       {metrics && (

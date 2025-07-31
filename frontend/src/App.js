@@ -8,6 +8,8 @@ import PatientList from './components/PatientList';
 import PatientDetail from './components/PatientDetail';
 import UploadImages from './components/UploadImages';
 import Cases from './components/cases';
+import ManualRegister from './components/ManualRegister';
+import Dashboard from './components/Dashboard';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -40,7 +42,7 @@ function App() {
       <Sidebar isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       <main className={`content ${false ? 'collapsed' : ''}`}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          {/* <Route path="/" element={<Dashboard />} /> */}
           <Route
             path="/login"
             element={
@@ -90,7 +92,16 @@ function App() {
               <Cases />
             </ProtectedRoute>
           } />
-
+          <Route path="/manual-register" element={
+            <ProtectedRoute>
+              <ManualRegister />
+            </ProtectedRoute>
+          } />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
 
@@ -99,14 +110,6 @@ function App() {
   );
 }
 
-function Dashboard() {
-  return (
-    <div>
-      <h2>Bienvenue Docteur 👩‍⚕️</h2>
-      <p>Tableau de bord accessible même sans connexion.</p>
-    </div>
-  );
-}
 
 
 

@@ -11,7 +11,7 @@ const menuItems = [
 { label: 'Liste Patients', icon: <User size={20} />, to: '/patients' },
 { label: 'Créer un patient', icon: <UserPlus size={20} />, to: '/patient-form', protected: true },
 { label: 'Importer des images', icon: <Upload size={20} />, to: '/upload', protected: true },
-{ label: 'Exporter les résultats', icon: <FileText size={20} />, to: '/export', protected: true },
+//{ label: 'Exporter les résultats', icon: <FileText size={20} />, to: '/export', protected: true },
 ];
 
 return (

@@ -412,6 +412,7 @@ def register_images():
 
         return jsonify({
             "message": "Recalage effectué et enregistré avec succès.",
+            "fixed_image": encode_image(I),
             "registered_image": encode_image(Jw),
             "difference_image": encode_image(diff),
             "overlay_image": encode_image(overlay),
@@ -424,7 +425,254 @@ def register_images():
         print("Erreur dans /register:", str(e))
         return jsonify({"error": str(e)}), 500
 
+def procrustes(X, Y, scaling=True, reflection='best'):
+    n, m = X.shape
+    muX = X.mean(0)
+    muY = Y.mean(0)
+    X0 = X - muX
+    Y0 = Y - muY
 
+    normX = np.sqrt((X0**2.).sum())
+    normY = np.sqrt((Y0**2.).sum())
+    X0 /= normX
+    Y0 /= normY
+
+    A = np.dot(X0.T, Y0)
+    U, s, Vt = np.linalg.svd(A, full_matrices=False)
+    V = Vt.T
+    T = np.dot(V, U.T)
+
+    if reflection != 'best':
+        if (np.linalg.det(T) < 0) ^ (not reflection):
+            V[:,-1] *= -1
+            s[-1] *= -1
+            T = np.dot(V, U.T)
+
+    scale = s.sum() * normX / normY if scaling else 1
+    translation = muX - scale * np.dot(muY, T)
+
+    return {
+        'rotation': T,
+        'scale': scale,
+        'translation': translation
+    }
+
+def build_transform_matrix(tform):
+    R = np.eye(3)
+    R[0:2, 0:2] = tform['rotation']
+    
+    S = np.eye(3) * tform['scale']
+    S[2, 2] = 1
+    
+    t = np.eye(3)
+    t[0:2, 2] = tform['translation']
+    
+    return (R @ S @ t.T).T
+
+def apply_transform(image, matrix, output_shape):
+    return cv2.warpAffine(
+        image, 
+        matrix[0:2, :], 
+        (output_shape[1], output_shape[0]),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=0
+    )
+
+# ============ ALIGN + RECENTRAGE FOND NOIR ============
+
+def crop_and_center(image, canvas_size=(512, 512)):
+    """Croppe la zone utile et recentre avec du noir autour."""
+    coords = cv2.findNonZero((image > 5).astype(np.uint8))  # Tolère un petit bruit
+    if coords is None:
+        return np.zeros(canvas_size, dtype=np.uint8)
+
+    x, y, w, h = cv2.boundingRect(coords)
+    cropped = image[y:y+h, x:x+w]
+
+    result = np.zeros(canvas_size, dtype=np.uint8)
+    ch, cw = cropped.shape
+    cy, cx = canvas_size[0] // 2, canvas_size[1] // 2
+
+    y1 = cy - ch // 2
+    x1 = cx - cw // 2
+    y2 = y1 + ch
+    x2 = x1 + cw
+
+    if 0 <= y1 < canvas_size[0] and 0 <= x1 < canvas_size[1]:
+        result[y1:y2, x1:x2] = cropped
+    return result
+
+# =================== FLASK ROUTE ====================
+
+@app.route('/manual-register', methods=['POST'])
+def manual_register():
+    try:
+        data = request.get_json()
+        
+        ct_points = np.array(data.get('ct_points', []), dtype=np.float32)
+        mri_points = np.array(data.get('mri_points', []), dtype=np.float32)
+        
+        if len(ct_points) != len(mri_points):
+            return jsonify({'error': 'Le nombre de points doit être identique'}), 400
+
+        ct = base64_to_cv2_img(data['fixed_image'])
+        mri = base64_to_cv2_img(data['moving_image'])
+
+        # Resize (standard)
+        ct = cv2.resize(ct, (512, 512))
+        mri = cv2.resize(mri, (512, 512))
+
+        # Alignement via Procrustes
+        tform = procrustes(ct_points, mri_points)
+        M = build_transform_matrix(tform)
+        mri_aligned = apply_transform(mri, M, ct.shape)
+
+        # Crop et recentrage
+        mri_aligned_centered = crop_and_center(mri_aligned, canvas_size=(512, 512))
+
+        # Visualisation
+        diff = create_diff_image(ct, mri_aligned_centered)
+        overlay = create_overlay(ct, mri_aligned_centered)
+
+        return jsonify({
+            'fixedImageUrl': f"data:image/png;base64,{cv2_img_to_base64(ct)}",
+            'registeredImageUrl': f"data:image/png;base64,{cv2_img_to_base64(mri_aligned_centered)}",
+            'diffImageUrl': f"data:image/png;base64,{cv2_img_to_base64(diff)}",
+            'overlayImageUrl': f"data:image/png;base64,{cv2_img_to_base64(overlay)}",
+            'transformation_matrix': M.tolist(),
+            'message': 'Recalage et recentrage terminés avec succès.'
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# =================== UTILS ====================
+
+def create_diff_image(fixed, moved):
+    diff = np.abs(fixed.astype(float) - moved.astype(float))
+    if diff.max() > 0:
+        diff = (diff / diff.max() * 255)
+    return diff.astype(np.uint8)
+
+def create_overlay(img1, img2):
+    return cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+
+def base64_to_cv2_img(b64_str):
+    if b64_str.startswith('data:image'):
+        b64_str = b64_str.split(',')[1]
+    img_data = base64.b64decode(b64_str)
+    return cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_GRAYSCALE)
+
+def cv2_img_to_base64(img):
+    _, buffer = cv2.imencode('.png', img)
+    return base64.b64encode(buffer).decode('utf-8')
+
+@app.route('/calculate-metrics', methods=['POST'])
+def calculate_metrics():
+    try:
+        data = request.get_json()
+        fixed_b64 = data.get('fixed_image')
+        registered_b64 = data.get('registered_image')
+        patient_id = data.get('patient_id')
+
+        if not fixed_b64 or not registered_b64:
+            return jsonify({"error": "Images manquantes"}), 400
+
+        def decode_base64_image(b64_string):
+            if b64_string.startswith('data:image'):
+                b64_string = b64_string.split(',')[1]
+            img_data = base64.b64decode(b64_string)
+            img = Image.open(io.BytesIO(img_data)).convert("RGB")
+            img = img.resize((512, 512))
+            return np.array(img).astype(np.float32) / 255.0
+
+        fixed_img = decode_base64_image(fixed_b64)
+        registered_img = decode_base64_image(registered_b64)
+
+        # Convertir en niveaux de gris
+        fixed_gray = cv2.cvtColor((fixed_img * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
+        registered_gray = cv2.cvtColor((registered_img * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
+
+        # Seuillage pour les métriques basées sur les contours
+        _, bin_fixed = cv2.threshold(fixed_gray, 50, 255, cv2.THRESH_BINARY)
+        _, bin_registered = cv2.threshold(registered_gray, 50, 255, cv2.THRESH_BINARY)
+
+        # Calcul des métriques
+        dice = dice_coefficient(bin_fixed, bin_registered)
+        hd_95 = hd95(bin_fixed, bin_registered)
+        hd = hausdorff_distance(bin_fixed, bin_registered)
+        mse = mean_squared_error(fixed_gray.flatten(), registered_gray.flatten())
+        mi = mutual_information(fixed_gray, registered_gray)
+        ncc = normalized_cross_correlation(fixed_gray, registered_gray)
+
+        """ # Enregistrer dans la base de données
+        if patient_id:
+            case = {
+                "created_at": datetime.now(),
+                "metrics": {
+                    "dice_coefficient": dice,
+                    "hd95_distance": hd_95,
+                    "hausdorff_distance": hd,
+                    "mean_squared_error": mse,
+                    "mutual_information": mi,
+                    "normalized_cross_correlation": ncc
+                },
+                "registration_type": "manual"
+            }
+
+            mongo.db.patients.update_one(
+                {"patient_id": patient_id},
+                {"$push": {"cases": case}}
+            ) """
+
+        return jsonify({
+            "dice_coefficient": dice,
+            "hd95_distance": hd_95,
+            "hausdorff_distance": hd,
+            "mean_squared_error": mse,
+            "mutual_information": mi,
+            "normalized_cross_correlation": ncc
+        }), 200
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/api/stats', methods=['GET'])
+def get_statistics():
+    try:
+        nb_patients = mongo.db.patients.count_documents({})
+        all_patients = mongo.db.patients.find()
+
+        nb_exams = 0
+        exams_by_pathology = {}
+
+        print("---- PATIENTS DÉTECTÉS ----")
+
+        for p in all_patients:
+            patho = p.get("pathologie")
+            print("→ pathologie :", patho)
+            num_cases = len(p.get("cases", []))
+            nb_exams += num_cases
+            if patho:
+                exams_by_pathology[patho] = exams_by_pathology.get(patho, 0) + num_cases
+
+        doctor = mongo.db.doctors.find_one({}, {"name": 1})
+        doctor_name = doctor.get("name", "Inconnu") if doctor else "Inconnu"
+
+        return jsonify({
+            "nb_patients": nb_patients,
+            "nb_exams": nb_exams,
+            "doctor_name": doctor_name,
+            "exams_by_pathology": exams_by_pathology
+        })
+    except Exception as e:
+        print("🔥 ERREUR DANS /api/stats:", str(e))
+        return jsonify({"error": "Erreur interne"}), 500
 
 
 if __name__ == '__main__':
