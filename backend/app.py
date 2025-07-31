@@ -19,7 +19,7 @@ from registration_model import (
 import torch.optim as optim
 import torch
 import threading
-
+import gridfs
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 app = Flask(__name__)
@@ -28,6 +28,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["MONGO_URI"] = "mongodb://localhost:27017/medapp"
 mongo = PyMongo(app)
+fs = gridfs.GridFS(mongo.db)
 progress_dict = {'value': 0}
 result_dict = {'matrix': None, 'mi_list': None, 'done': False}
 
@@ -316,7 +317,18 @@ def normalized_cross_correlation(img1, img2):
     return corr
 
 
-# --- Endpoint register ---
+# Helper function to store large images in GridFS
+def store_image_in_gridfs(image_data, filename):
+    if image_data.startswith('data:image'):
+        image_data = image_data.split(',')[1]
+    file_id = fs.put(base64.b64decode(image_data), filename=filename)
+    return str(file_id)
+
+# Helper function to retrieve images from GridFS
+def get_image_from_gridfs(file_id):
+    file_data = fs.get(ObjectId(file_id))
+    return base64.b64encode(file_data.read()).decode('utf-8')
+
 @app.route('/register', methods=['POST'])
 def register_images():
     patient_id = request.args.get('patient_id')
@@ -384,11 +396,16 @@ def register_images():
             _, buffer = cv2.imencode('.png', (img * 255).astype(np.uint8))
             return base64.b64encode(buffer).decode('utf-8')
 
+        # Store large images in GridFS instead of directly in the document
+        fixed_image_id = store_image_in_gridfs(fixed_b64, f"{patient_id}_fixed.png")
+        moved_image_id = store_image_in_gridfs(moved_b64, f"{patient_id}_moved.png")
+        registered_image_id = store_image_in_gridfs(encode_image(Jw), f"{patient_id}_registered.png")
+
         case = {
             "created_at": datetime.now(),
-            "fixed_image": encode_image(I),
-            "moved_image": encode_image(J),
-            "registered_image": encode_image(Jw),
+            "fixed_image_id": fixed_image_id,
+            "moved_image_id": moved_image_id,
+            "registered_image_id": registered_image_id,
             "transformation_matrix": H_np.tolist(),
             "mi_list": mi_list,
             "metrics": {
@@ -410,6 +427,7 @@ def register_images():
             {"$push": {"cases": case}}
         )
 
+        # Return the case data with image URLs that can be fetched separately
         return jsonify({
             "message": "Recalage effectué et enregistré avec succès.",
             "fixed_image": encode_image(I),
@@ -425,6 +443,15 @@ def register_images():
         print("Erreur dans /register:", str(e))
         return jsonify({"error": str(e)}), 500
 
+# Add endpoint to fetch images from GridFS
+@app.route('/get-image/<file_id>', methods=['GET'])
+def get_image(file_id):
+    try:
+        image_data = get_image_from_gridfs(file_id)
+        return jsonify({"image": f"data:image/png;base64,{image_data}"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+    
 def procrustes(X, Y, scaling=True, reflection='best'):
     n, m = X.shape
     muX = X.mean(0)

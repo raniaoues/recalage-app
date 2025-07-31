@@ -355,24 +355,21 @@ export default function ImageRegistrationApp() {
     setFixedImage(fixedImg);
     setMovingImage(`data:image/png;base64,${moved_image}`);
 
-    // Deux options pour la différence :
-    // 1. Utiliser celle du backend si disponible
-    // 2. Sinon calculer côté client
+    // Use the difference image from backend if available
     if (data.difference_image) {
       const diffImg = `data:image/png;base64,${data.difference_image}`;
       setDifferenceImage(diffImg);
       setDynamicDifference(diffImg);
     } else {
-      // Calculer la différence initiale
       computeDynamicDifference(0.5);
     }
 
-    // Mettre à jour les métriques
+    // Update metrics
     if (data.metrics) {
       setMetrics(data.metrics);
     }
 
-    // Nettoyage du localStorage
+    // Cleanup localStorage
     ["cas_fixed", "cas_moved", "cas_matrix", "cas_mi_list", "cas_from_history"].forEach(
       key => localStorage.removeItem(key)
     );
@@ -384,6 +381,18 @@ export default function ImageRegistrationApp() {
     alert(`Échec du recalage: ${err.message}`);
   } finally {
     setIsGenerating(false);
+  }
+};
+
+// Add a function to fetch images from GridFS when needed
+const fetchImageFromGridFS = async (fileId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/get-image/${fileId}`);
+    const data = await response.json();
+    return data.image;
+  } catch (err) {
+    console.error("Error fetching image:", err);
+    return null;
   }
 };
   const handleGenerateMatrix = async () => {
